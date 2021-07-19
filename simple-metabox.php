@@ -11,7 +11,7 @@
 	class SimpleMetabox {
 		public function __construct() {
 			add_action( 'plugins_loaded', array( $this, 'simplemeta_load_textdomain' ) );
-			add_action( 'admin_menu', array( $this, 'simplemeta_add_meta_box' ) );
+			add_action( 'admin_menu', array( $this, 'simplemeta_add_metabox' ) );
 			add_action( 'save_post', array( $this, 'simplemeta_save_postmeta' ) );
 		}
 
@@ -19,7 +19,7 @@
 			load_plugin_textdomain( 'simple-metabox', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 		}
 
-		function simplemeta_add_meta_box() {
+		function simplemeta_add_metabox() {
 			add_meta_box(
 				'sm_post_location',                 // Unique ID
 				__( 'Location Info', 'simple-metabox' ),      // Box title
@@ -30,8 +30,13 @@
 		function simplemeta_display_post_location( $post ) {
 			$country     = get_post_meta( $post->ID, 'simplemeta_country', true );
 			$city     = get_post_meta( $post->ID, 'simplemeta_city', true );
-			$country_label        = __( 'Country', 'simple_metabox' );
-			$city_label        = __( 'City', 'simple_metabox' );
+			$is_favorite     = get_post_meta( $post->ID, 'simplemeta_is_favorite', true );
+			print_r($is_favorite);
+			$checked = ( $is_favorite == 1 ) ? 'checked' : '';
+			print_r($checked);
+			$country_label        = __( 'Country', 'simple-metabox' );
+			$city_label        = __( 'City', 'simple-metabox' );
+			$is_favorite_label = __( 'Is Favorite?', 'simple-metabox' );
 			wp_nonce_field( 'simplemeta_location_info', 'simplemeta_location_field');
 			$metabox_html = <<<EOD
 <p>
@@ -41,6 +46,10 @@
 	<br>
 	<label for="simplemeta_city">{$city_label}</label>
 	<input type="text" name="simplemeta_city" id="simplemeta_city" value={$city}>
+</p>
+<p>
+<label for="simplemeta_is_favorite">{$is_favorite_label}</label>
+<input type="checkbox" name="simplemeta_is_favorite" id="simplemeta_is_favorite" value="1" {$checked}>
 </p>
 EOD;
 			echo $metabox_html;
@@ -54,27 +63,18 @@ EOD;
 			}
 			$country =  isset( $_POST['simplemeta_country'] ) ? $_POST['simplemeta_country'] : '' ;
 			$city =  isset( $_POST['simplemeta_city'] ) ? $_POST['simplemeta_city'] : '' ;
+			$is_favorite = isset( $_POST['simplemeta_is_favorite'] ) ? $_POST['simplemeta_is_favorite'] : 0 ;
 
 			// Sanitizing Input Values
 			$country = sanitize_text_field($country);
 			$city   = sanitize_text_field($city);
 
 			// Checking if meta data exists
-			$this->checkPostMeta('simplemeta_country', $country , $post_id);
-			$this->checkPostMeta( 'simplemeta_city', $city , $post_id);
+			update_post_meta( $post_id, 'simplemeta_country', $country );
+			update_post_meta( $post_id, 'simplemeta_city', $city );
+			update_post_meta( $post_id, 'simplemeta_is_favorite', $is_favorite );
 		}
 
-		function checkPostMeta($meta_key, $meta_field_val, $post_id) {
-			if ( array_key_exists( $meta_key, $_POST ) ) {
-				update_post_meta(
-					$post_id,
-					$meta_key,
-					$meta_field_val
-				);
-			} else {
-				$post_id;
-			}
-		}
 
 		/*Securing Post Meta*/
 		private function is_secured_postmeta($nonce_field, $action, $post_id) {
